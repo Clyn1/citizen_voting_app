@@ -29,9 +29,19 @@ class _LoginPageState extends State<LoginPage> {
         password: passwordController.text.trim(),
       );
 
+<<<<<<< HEAD
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Login successful!')),
       );
+=======
+      // Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Login successful!')),
+      );
+
+      // Redirect to vote page
+      Navigator.pushReplacementNamed(context, '/vote');
+>>>>>>> recover-commits
     } on FirebaseAuthException catch (e) {
       setState(() {
         error = e.message;
@@ -98,7 +108,12 @@ class _LoginPageState extends State<LoginPage> {
                 onPressed: () {
                   Navigator.push(
                     context,
+<<<<<<< HEAD
                     MaterialPageRoute(builder: (context) => const RegisterPage()),
+=======
+                    MaterialPageRoute(
+                        builder: (context) => const RegisterPage()),
+>>>>>>> recover-commits
                   );
                 },
                 child: const Text("Don't have an account? Register"),

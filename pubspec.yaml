@@ -1,5 +1,9 @@
 name: citizen_voting_app
+<<<<<<< HEAD
 description: A new Flutter project.
+=======
+description: A Flutter project for secure citizen voting.
+>>>>>>> recover-commits
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -13,9 +17,16 @@ dependencies:
   # UI
   cupertino_icons: ^1.0.8
 
+<<<<<<< HEAD
   # Firebase (Compatible with Dart 3.8.0)
   firebase_core: ^2.30.0
   firebase_auth: ^4.17.4
+=======
+  # Firebase
+  firebase_core:   ^2.30.0
+  firebase_auth:   ^4.17.4
+  cloud_firestore: ^4.17.5
+>>>>>>> recover-commits
 
   # State Management
   provider: ^6.1.1
