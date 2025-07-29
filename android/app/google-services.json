@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "74676319669",
+    "project_id": "citizen-voting-app",
+    "storage_bucket": "citizen-voting-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:74676319669:android:3f331eb9a440e5763815fc",
+        "android_client_info": {
+          "package_name": "com.clinton.citizenvotingapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCnyAAnyPTQSRqRzH8rKBHT3xHxZzBfWCY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:74676319669:android:ff8fc6fbdac92e6b3815fc",
+        "android_client_info": {
+          "package_name": "com.example.citizen_voting_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCnyAAnyPTQSRqRzH8rKBHT3xHxZzBfWCY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
