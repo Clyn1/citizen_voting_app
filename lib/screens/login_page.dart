@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'register_page.dart'; // Import register page
+import 'register_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -29,19 +29,13 @@ class _LoginPageState extends State<LoginPage> {
         password: passwordController.text.trim(),
       );
 
-<<<<<<< HEAD
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Login successful!')),
-      );
-=======
       // Show success message
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Login successful!')),
       );
 
-      // Redirect to vote page
+      // Redirect to vote page (make sure /vote is defined in routes)
       Navigator.pushReplacementNamed(context, '/vote');
->>>>>>> recover-commits
     } on FirebaseAuthException catch (e) {
       setState(() {
         error = e.message;
@@ -108,12 +102,8 @@ class _LoginPageState extends State<LoginPage> {
                 onPressed: () {
                   Navigator.push(
                     context,
-<<<<<<< HEAD
-                    MaterialPageRoute(builder: (context) => const RegisterPage()),
-=======
                     MaterialPageRoute(
                         builder: (context) => const RegisterPage()),
->>>>>>> recover-commits
                   );
                 },
                 child: const Text("Don't have an account? Register"),
