@@ -1,100 +1,50 @@
-import 'package:flutter/material.dart';
+// lib/screens/vote_page.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
 
-class VotePage extends StatefulWidget {
+class VotePage extends StatelessWidget {
   const VotePage({super.key});
-
-  @override
-  State<VotePage> createState() => _VotePageState();
-}
-
-class _VotePageState extends State<VotePage> {
-  String? _selection;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Cast Your Vote'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.bar_chart),
-            onPressed: () {
-              Navigator.pushNamed(context, '/results');
+      appBar: AppBar(title: const Text('Vote for Your Candidate')),
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance.collection('candidates').snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return const Center(child: Text('No candidates available.'));
+          }
+
+          final candidates = snapshot.data!.docs;
+
+          return ListView.builder(
+            itemCount: candidates.length,
+            itemBuilder: (context, index) {
+              final candidate = candidates[index];
+              final name = candidate['name'];
+              final party = candidate['party'] ?? 'Independent';
+
+              return ListTile(
+                title: Text(name),
+                subtitle: Text(party),
+                trailing: ElevatedButton(
+                  child: const Text('Vote'),
+                  onPressed: () {
+                    // Optional: implement vote logic here
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Voted for $name')),
+                    );
+                  },
+                ),
+              );
             },
-          )
-        ],
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Expanded(
-              child: StreamBuilder<QuerySnapshot>(
-                stream: FirebaseFirestore.instance
-                    .collection('candidates')
-                    .snapshots(),
-                builder: (context, snap) {
-                  if (snap.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                  final docs = snap.data?.docs ?? [];
-                  if (docs.isEmpty) {
-                    return const Center(child: Text('No candidates found.'));
-                  }
-                  return ListView(
-                    children: docs.map((doc) {
-                      final id = doc.id;
-                      final displayName = doc['name'] as String;
-                      return RadioListTile<String>(
-                        title: Text(displayName),
-                        value: id,
-                        groupValue: _selection,
-                        onChanged: (v) => setState(() => _selection = v),
-                      );
-                    }).toList(),
-                  );
-                },
-              ),
-            ),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _selection == null ? null : _submitVote,
-                child: const Text('Submit Vote'),
-              ),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
-  }
-
-  Future<void> _submitVote() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('You must be logged in to vote.')),
-      );
-      return;
-    }
-
-    final voteDoc = FirebaseFirestore.instance
-        .collection('votes')
-        .doc(_selection);
-
-    await FirebaseFirestore.instance.runTransaction((tx) async {
-      final snapshot = await tx.get(voteDoc);
-      final current = snapshot.exists ? (snapshot['count'] as int) : 0;
-      tx.set(voteDoc, {'count': current + 1});
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Vote submitted!')),
-    );
-    setState(() {
-      _selection = null;
-    });
   }
 }
