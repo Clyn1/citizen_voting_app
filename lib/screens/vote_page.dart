@@ -1,4 +1,3 @@
-// lib/screens/vote_page.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
@@ -15,18 +14,30 @@ class VotePage extends StatelessWidget {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
+
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
+
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
             return const Center(child: Text('No candidates available.'));
           }
 
           final candidates = snapshot.data!.docs;
 
+          // Debug print to check fetched data in console/logs
+          for (var doc in candidates) {
+            print('Candidate data: ${doc.data()}');
+          }
+
           return ListView.builder(
             itemCount: candidates.length,
             itemBuilder: (context, index) {
               final candidate = candidates[index];
-              final name = candidate['name'];
-              final party = candidate['party'] ?? 'Independent';
+              final data = candidate.data() as Map<String, dynamic>;
+
+              final name = data['name'] ?? 'Unnamed Candidate';
+              final party = data['party'] ?? 'Independent';
 
               return ListTile(
                 title: Text(name),
@@ -34,10 +45,10 @@ class VotePage extends StatelessWidget {
                 trailing: ElevatedButton(
                   child: const Text('Vote'),
                   onPressed: () {
-                    // Optional: implement vote logic here
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text('Voted for $name')),
                     );
+                    // You can add your voting logic here
                   },
                 ),
               );
