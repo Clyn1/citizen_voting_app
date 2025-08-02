@@ -11,33 +11,38 @@ class VotePage extends StatelessWidget {
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance.collection('candidates').snapshots(),
         builder: (context, snapshot) {
+          // 1. Show error message if there is an error
+          if (snapshot.hasError) {
+            return const Center(child: Text('Something went wrong!'));
+          }
+
+          // 2. Show loading indicator while waiting for data
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          }
-
+          // 3. Show message if no candidates are found
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
             return const Center(child: Text('No candidates available.'));
           }
 
+          // 4. Data loaded, build list of candidates
           final candidates = snapshot.data!.docs;
 
-          // Debug print to check fetched data in console/logs
+          // Optional debug: print candidate data to console
           for (var doc in candidates) {
-            print('Candidate data: ${doc.data()}');
+            final data = doc.data() as Map<String, dynamic>? ?? {};
+            print('Candidate data: $data');
           }
 
           return ListView.builder(
             itemCount: candidates.length,
             itemBuilder: (context, index) {
-              final candidate = candidates[index];
-              final data = candidate.data() as Map<String, dynamic>;
+              final doc = candidates[index];
+              final data = doc.data() as Map<String, dynamic>? ?? {};
 
-              final name = data['name'] ?? 'Unnamed Candidate';
-              final party = data['party'] ?? 'Independent';
+              final name = (data['name'] as String?)?.trim() ?? 'Unnamed Candidate';
+              final party = (data['party'] as String?)?.trim() ?? 'Independent';
 
               return ListTile(
                 title: Text(name),
@@ -48,7 +53,7 @@ class VotePage extends StatelessWidget {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text('Voted for $name')),
                     );
-                    // You can add your voting logic here
+                    // TODO: Add your voting logic here.
                   },
                 ),
               );
