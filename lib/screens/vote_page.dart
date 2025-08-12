@@ -36,7 +36,9 @@ class _VotePageState extends State<VotePage> {
           }
 
           final docs = snapshot.data?.docs ?? [];
-          if (docs.isEmpty) return const Center(child: Text('No candidates available.'));
+          if (docs.isEmpty) {
+            return const Center(child: Text('No candidates available.'));
+          }
 
           return ListView.builder(
             itemCount: docs.length,
@@ -44,19 +46,42 @@ class _VotePageState extends State<VotePage> {
             itemBuilder: (context, i) {
               final doc = docs[i];
               final data = doc.data();
-              final display = (data['displayName'] as String?)?.trim() ?? doc.id;
+
+              // Use 'name' if available, otherwise fallback to doc.id
+              final display = (data['name'] as String?)?.trim() ?? doc.id;
               final canonicalName = (data['name'] as String?)?.trim() ?? doc.id;
               final votesCountRaw = data['votesCount'];
               final votes = (votesCountRaw is num) ? votesCountRaw.toInt() : 0;
+
+              // ✅ Use correct Firestore field name 'photoUrl'
+              final photoUrl = (data['photoUrl'] as String?)?.trim() ?? '';
+
               final alreadyVoted = _votedCandidateSessionId != null;
 
               return Card(
                 margin: const EdgeInsets.symmetric(vertical: 6),
                 child: ListTile(
-                  leading: Radio<String>(
-                    value: canonicalName,
-                    groupValue: _selectedId,
-                    onChanged: alreadyVoted ? null : (v) => setState(() => _selectedId = v),
+                  leading: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Radio<String>(
+                        value: canonicalName,
+                        groupValue: _selectedId,
+                        onChanged: alreadyVoted
+                            ? null
+                            : (v) => setState(() => _selectedId = v),
+                      ),
+                      const SizedBox(width: 8),
+                      CircleAvatar(
+                        radius: 25,
+                        backgroundImage: photoUrl.isNotEmpty
+                            ? NetworkImage(photoUrl)
+                            : null,
+                        child: photoUrl.isEmpty
+                            ? const Icon(Icons.person)
+                            : null,
+                      ),
+                    ],
                   ),
                   title: Text(display),
                   subtitle: Text('Votes: $votes'),
@@ -65,37 +90,64 @@ class _VotePageState extends State<VotePage> {
                         ? null
                         : () async {
                             if (_selectedId == null) {
-                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Select a candidate first')));
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Select a candidate first'),
+                                ),
+                              );
                               return;
                             }
-                            final user = FirebaseAuth.instance.currentUser;
+                            final user =
+                                FirebaseAuth.instance.currentUser;
                             if (user == null) {
-                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sign in to vote')));
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Sign in to vote'),
+                                ),
+                              );
                               return;
                             }
 
                             setState(() => _isSubmitting = true);
                             try {
-                              // Prefer to increment by doc id or 'name' field. We'll use doc reference directly:
-                              final docRef = FirebaseFirestore.instance.collection('candidates').doc(doc.id);
+                              final docRef = FirebaseFirestore.instance
+                                  .collection('candidates')
+                                  .doc(doc.id);
 
-                              await FirebaseFirestore.instance.runTransaction((tx) async {
+                              await FirebaseFirestore.instance
+                                  .runTransaction((tx) async {
                                 final snap = await tx.get(docRef);
                                 final data = snap.data();
-                                final current = (data != null && data['votesCount'] is num) ? (data['votesCount'] as num).toInt() : 0;
-                                tx.update(docRef, {'votesCount': current + 1});
+                                final current =
+                                    (data != null && data['votesCount'] is num)
+                                        ? (data['votesCount'] as num).toInt()
+                                        : 0;
+                                tx.update(docRef,
+                                    {'votesCount': current + 1});
                               });
 
-                              // Save that user voted (simple tracking)
-                              await FirebaseFirestore.instance.collection('user_votes').doc(user.uid).set({
+                              await FirebaseFirestore.instance
+                                  .collection('user_votes')
+                                  .doc(user.uid)
+                                  .set({
                                 'candidate': _selectedId,
-                                'timestamp': FieldValue.serverTimestamp(),
+                                'timestamp':
+                                    FieldValue.serverTimestamp(),
                               });
 
-                              setState(() => _votedCandidateSessionId = _selectedId);
-                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Voted for $display')));
+                              setState(() =>
+                                  _votedCandidateSessionId = _selectedId);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Voted for $display'),
+                                ),
+                              );
                             } catch (e) {
-                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Vote failed: $e')));
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Vote failed: $e'),
+                                ),
+                              );
                             } finally {
                               setState(() => _isSubmitting = false);
                             }
