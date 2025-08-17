@@ -46,8 +46,6 @@ class _VotePageState extends State<VotePage> {
             itemBuilder: (context, i) {
               final doc = docs[i];
               final data = doc.data();
-
-              // Use 'name' if available, otherwise fallback to doc.id
               final display = (data['name'] as String?)?.trim() ?? doc.id;
               final canonicalName = (data['name'] as String?)?.trim() ?? doc.id;
               final votesCountRaw = data['votesCount'];
