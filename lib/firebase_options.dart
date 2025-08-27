@@ -52,7 +52,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyCnyAAnyPTQSRqRzH8rKBHT3xHxZzBfWCY',
-    appId: '1:74676319669:android:ff8fc6fbdac92e6b3815fc',
+    appId: '1:74676319669:android:09fda2fe996534de3815fc',
     messagingSenderId: '74676319669',
     projectId: 'citizen-voting-app',
     storageBucket: 'citizen-voting-app.firebasestorage.app',
