@@ -1,197 +1,102 @@
-// lib/screens/admin_dashboard.dart
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
-
   @override
   State<AdminDashboard> createState() => _AdminDashboardState();
 }
 
 class _AdminDashboardState extends State<AdminDashboard> {
-  final TextEditingController _candidateNameController = TextEditingController();
-  final TextEditingController _partyController = TextEditingController();
+  final _nameCtrl = TextEditingController();
+  final _partyCtrl = TextEditingController();
+  bool _checkedAdmin = false;
+  bool _isAdmin = false;
+  String? uid;
 
-  Future<void> _addCandidate() async {
-    if (_candidateNameController.text.isEmpty) return;
-
-    try {
-      await FirebaseFirestore.instance.collection('candidates').add({
-        'name': _candidateNameController.text,
-        'party': _partyController.text,
-        'votes': 0,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-
-      _candidateNameController.clear();
-      _partyController.clear();
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Candidate added successfully')),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error adding candidate: $e')),
-        );
-      }
-    }
+  @override
+  void initState() {
+    super.initState();
+    final user = FirebaseAuth.instance.currentUser;
+    uid = user?.uid;
+    _checkAdmin();
   }
 
-  Future<void> _deleteCandidate(String candidateId, String candidateName) async {
-    try {
-      await FirebaseFirestore.instance
-          .collection('candidates')
-          .doc(candidateId)
-          .delete();
+  Future<void> _checkAdmin() async {
+    if (uid == null) return;
+    final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+    setState(() {
+      _isAdmin = doc.exists && (doc.data()?['isAdmin'] == true);
+      _checkedAdmin = true;
+    });
+  }
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('$candidateName deleted successfully')),
-        );
-      }
+  Future<void> _addCandidate() async {
+    final name = _nameCtrl.text.trim();
+    final party = _partyCtrl.text.trim();
+    if (name.isEmpty) return;
+    try {
+      await FirebaseFirestore.instance.collection('candidates').add({
+        'name': name,
+        'party': party,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+      _nameCtrl.clear();
+      _partyCtrl.clear();
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Candidate added')));
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error deleting candidate: $e')),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    if (!_checkedAdmin) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Admin Dashboard'),
-        backgroundColor: Colors.deepPurple,
-        foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () => FirebaseAuth.instance.signOut(),
+            tooltip: 'Sign out',
+          ),
+        ],
       ),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            // Add Candidate Form
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Add New Candidate',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: _candidateNameController,
-                      decoration: const InputDecoration(
-                        labelText: 'Candidate Name',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: _partyController,
-                      decoration: const InputDecoration(
-                        labelText: 'Party (Optional)',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: _addCandidate,
-                      child: const Text('Add Candidate'),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            // Candidates List
-            const Text(
-              'Current Candidates',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 10),
+            if (_isAdmin) ...[
+              // Add candidate form
+              TextField(controller: _nameCtrl, decoration: const InputDecoration(labelText: 'Candidate name')),
+              const SizedBox(height: 8),
+              TextField(controller: _partyCtrl, decoration: const InputDecoration(labelText: 'Party (optional)')),
+              const SizedBox(height: 8),
+              ElevatedButton(onPressed: _addCandidate, child: const Text('Add Candidate')),
+            ] else ...[
+              const Text('You are not an admin. You can only view candidates.'),
+            ],
+            const SizedBox(height: 24),
+            const Text('Current Candidates', style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
-                stream: FirebaseFirestore.instance
-                    .collection('candidates')
-                    .orderBy('createdAt', descending: true)
-                    .snapshots(),
+                stream: FirebaseFirestore.instance.collection('candidates').orderBy('createdAt', descending: true).snapshots(),
                 builder: (context, snapshot) {
-                  if (snapshot.hasError) {
-                    return Center(child: Text('Error: ${snapshot.error}'));
-                  }
-
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-
-                  if (snapshot.data!.docs.isEmpty) {
-                    return const Center(
-                      child: Text('No candidates added yet'),
-                    );
-                  }
-
-                  return ListView.builder(
-                    itemCount: snapshot.data!.docs.length,
-                    itemBuilder: (context, index) {
-                      final doc = snapshot.data!.docs[index];
-                      final candidate = doc.data() as Map<String, dynamic>;
-
-                      return Card(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        child: ListTile(
-                          leading: CircleAvatar(
-                            backgroundColor: Colors.deepPurple,
-                            child: Text(
-                              candidate['name'][0].toUpperCase(),
-                              style: const TextStyle(color: Colors.white),
-                            ),
-                          ),
-                          title: Text(candidate['name'] ?? 'Unknown'),
-                          subtitle: Text(candidate['party'] ?? 'Independent'),
-                          trailing: IconButton(
-                            icon: const Icon(Icons.delete, color: Colors.red),
-                            onPressed: () {
-                              showDialog(
-                                context: context,
-                                builder: (BuildContext context) {
-                                  return AlertDialog(
-                                    title: const Text('Delete Candidate'),
-                                    content: Text(
-                                      'Are you sure you want to delete ${candidate['name']}?',
-                                    ),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () => Navigator.of(context).pop(),
-                                        child: const Text('Cancel'),
-                                      ),
-                                      TextButton(
-                                        onPressed: () {
-                                          Navigator.of(context).pop();
-                                          _deleteCandidate(doc.id, candidate['name']);
-                                        },
-                                        child: const Text(
-                                          'Delete',
-                                          style: TextStyle(color: Colors.red),
-                                        ),
-                                      ),
-                                    ],
-                                  );
-                                },
-                              );
-                            },
-                          ),
-                        ),
-                      );
-                    },
+                  if (snapshot.hasError) return Text('Error: ${snapshot.error}');
+                  if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+                  final docs = snapshot.data!.docs;
+                  if (docs.isEmpty) return const Center(child: Text('No candidates yet'));
+                  return ListView(
+                    children: docs.map((doc) {
+                      final data = doc.data() as Map<String, dynamic>;
+                      return ListTile(title: Text(data['name'] ?? ''), subtitle: Text(data['party'] ?? ''));
+                    }).toList(),
                   );
                 },
               ),
@@ -200,12 +105,5 @@ class _AdminDashboardState extends State<AdminDashboard> {
         ),
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    _candidateNameController.dispose();
-    _partyController.dispose();
-    super.dispose();
   }
 }
