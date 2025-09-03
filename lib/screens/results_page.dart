@@ -18,17 +18,14 @@ class ResultsPage extends StatelessWidget {
             return const Center(child: Text('No candidates available.'));
           }
 
-          // Create map of candidate data
+          // Build candidate map for quick lookup
           final candidateMap = {
             for (var doc in candidateSnap.data!.docs)
               doc.id.toUpperCase(): {
                 'name': (doc.data() as Map<String, dynamic>)['name'] ?? '',
-                // Check both 'url' and 'imageUrl'
-                'imageUrl': (doc.data() as Map<String, dynamic>).containsKey('url')
-                    ? (doc.data() as Map<String, dynamic>)['url']
-                    : ((doc.data() as Map<String, dynamic>).containsKey('imageUrl')
-                        ? (doc.data() as Map<String, dynamic>)['imageUrl']
-                        : ''),
+                'imageUrl': (doc.data() as Map<String, dynamic>)['url'] ??
+                    (doc.data() as Map<String, dynamic>)['imageUrl'] ??
+                    '',
               }
           };
 
@@ -43,8 +40,10 @@ class ResultsPage extends StatelessWidget {
               }
 
               final votes = voteSnap.data!.docs;
-              final counts = votes.map((d) => (d['count'] ?? 0) as int);
-              final maxCount = counts.isEmpty ? 1 : counts.reduce((a, b) => a > b ? a : b);
+              final totalVotes = votes.fold<int>(
+                0,
+                (sum, doc) => sum + (doc['count'] ?? 0) as int,
+              );
 
               return ListView.builder(
                 padding: const EdgeInsets.all(16),
@@ -53,7 +52,7 @@ class ResultsPage extends StatelessWidget {
                   final voteDoc = votes[i];
                   final candidateId = voteDoc.id.toUpperCase();
                   final count = (voteDoc['count'] ?? 0) as int;
-                  final percent = count / maxCount;
+                  final percent = totalVotes == 0 ? 0.0 : count / totalVotes;
 
                   final candidateData = candidateMap[candidateId];
                   final candidateName = candidateData?['name'] ?? candidateId;
@@ -69,7 +68,8 @@ class ResultsPage extends StatelessWidget {
                               ? NetworkImage(imageUrl)
                               : null,
                           radius: 24,
-                          child: imageUrl.isEmpty ? const Icon(Icons.person) : null,
+                          child:
+                              imageUrl.isEmpty ? const Icon(Icons.person) : null,
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -78,7 +78,8 @@ class ResultsPage extends StatelessWidget {
                             children: [
                               Text(
                                 candidateName.toUpperCase(),
-                                style: const TextStyle(fontWeight: FontWeight.bold),
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold),
                               ),
                               const SizedBox(height: 4),
                               Stack(
@@ -103,7 +104,7 @@ class ResultsPage extends StatelessWidget {
                                 ],
                               ),
                               const SizedBox(height: 4),
-                              Text('Votes: $count'),
+                              Text('Votes: $count (${(percent * 100).toStringAsFixed(1)}%)'),
                             ],
                           ),
                         ),
