@@ -44,16 +44,22 @@ class _AdminDashboardState extends State<AdminDashboard> {
       });
       _nameCtrl.clear();
       _partyCtrl.clear();
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Candidate added')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Candidate added')),
+      );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     if (!_checkedAdmin) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
     }
 
     return Scaffold(
@@ -69,39 +75,84 @@ class _AdminDashboardState extends State<AdminDashboard> {
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            if (_isAdmin) ...[
-              // Add candidate form
-              TextField(controller: _nameCtrl, decoration: const InputDecoration(labelText: 'Candidate name')),
-              const SizedBox(height: 8),
-              TextField(controller: _partyCtrl, decoration: const InputDecoration(labelText: 'Party (optional)')),
-              const SizedBox(height: 8),
-              ElevatedButton(onPressed: _addCandidate, child: const Text('Add Candidate')),
-            ] else ...[
-              const Text('You are not an admin. You can only view candidates.'),
-            ],
-            const SizedBox(height: 24),
-            const Text('Current Candidates', style: TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            Expanded(
-              child: StreamBuilder<QuerySnapshot>(
-                stream: FirebaseFirestore.instance.collection('candidates').orderBy('createdAt', descending: true).snapshots(),
-                builder: (context, snapshot) {
-                  if (snapshot.hasError) return Text('Error: ${snapshot.error}');
-                  if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-                  final docs = snapshot.data!.docs;
-                  if (docs.isEmpty) return const Center(child: Text('No candidates yet'));
-                  return ListView(
-                    children: docs.map((doc) {
-                      final data = doc.data() as Map<String, dynamic>;
-                      return ListTile(title: Text(data['name'] ?? ''), subtitle: Text(data['party'] ?? ''));
-                    }).toList(),
-                  );
-                },
+        child: SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: MediaQuery.of(context).size.height -
+                  kToolbarHeight - // remove app bar height
+                  MediaQuery.of(context).padding.top,
+            ),
+            child: IntrinsicHeight(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (_isAdmin) ...[
+                    TextField(
+                      controller: _nameCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Candidate name',
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _partyCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Party (optional)',
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    ElevatedButton(
+                      onPressed: _addCandidate,
+                      child: const Text('Add Candidate'),
+                    ),
+                  ] else ...[
+                    const Text(
+                      'You are not an admin. You can only view candidates.',
+                    ),
+                  ],
+                  const SizedBox(height: 24),
+                  const Text(
+                    'Current Candidates',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Expanded(
+                    child: StreamBuilder<QuerySnapshot>(
+                      stream: FirebaseFirestore.instance
+                          .collection('candidates')
+                          .orderBy('createdAt', descending: true)
+                          .snapshots(),
+                      builder: (context, snapshot) {
+                        if (snapshot.hasError) {
+                          return Text('Error: ${snapshot.error}');
+                        }
+                        if (!snapshot.hasData) {
+                          return const Center(
+                            child: CircularProgressIndicator(),
+                          );
+                        }
+                        final docs = snapshot.data!.docs;
+                        if (docs.isEmpty) {
+                          return const Center(child: Text('No candidates yet'));
+                        }
+                        return ListView(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          children: docs.map((doc) {
+                            final data = doc.data() as Map<String, dynamic>;
+                            return ListTile(
+                              title: Text(data['name'] ?? ''),
+                              subtitle: Text(data['party'] ?? ''),
+                            );
+                          }).toList(),
+                        );
+                      },
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
+          ),
         ),
       ),
     );
