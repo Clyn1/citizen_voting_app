@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'firebase_options.dart';
 import 'screens/login_page.dart';
 import 'screens/home_page.dart';
+import 'screens/chatbot_page.dart'; // ✅ import chatbot screen
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -25,6 +26,7 @@ class MyApp extends StatelessWidget {
       routes: {
         '/login': (context) => const LoginScreen(),
         '/home': (context) => const HomePage(),
+        '/chat': (context) => const ChatScreen(), // ✅ new chatbot route
       },
       home: StreamBuilder<User?>(
         stream: FirebaseAuth.instance.authStateChanges(),
