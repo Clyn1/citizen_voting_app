@@ -26,7 +26,7 @@ class MyApp extends StatelessWidget {
       routes: {
         '/login': (context) => const LoginScreen(),
         '/home': (context) => const HomePage(),
-        '/chat': (context) => const ChatScreen(), // ✅ new chatbot route
+        '/chat': (context) => const ChatbotPage(), // ✅ Changed from ChatScreen to ChatbotPage
       },
       home: StreamBuilder<User?>(
         stream: FirebaseAuth.instance.authStateChanges(),

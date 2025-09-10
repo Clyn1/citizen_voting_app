@@ -24,6 +24,9 @@ dependencies:
   image_picker: ^1.1.1
   file_picker: ^6.0.0
 
+  # HTTP requests
+  http: ^1.2.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -32,7 +35,3 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-dependencies:
-  flutter:
-    sdk: flutter
-  http: ^1.2.0

@@ -1,6 +1,7 @@
 // lib/screens/chatbot_page.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import './chatbot_service.dart'; // ✅ Add this import
 
 class ChatbotPage extends StatefulWidget {
   const ChatbotPage({super.key});
@@ -59,30 +60,51 @@ class _ChatbotPageState extends State<ChatbotPage> {
     _messageController.clear();
     _scrollToBottom();
 
-    // Simulate AI response (replace with actual API call)
-    await _getAIResponse(text);
+    // ✅ Replace the old _getAIResponse with OpenAI API call
+    await _getOpenAIResponse(text);
   }
 
+  // ✅ NEW METHOD: Get response from OpenAI API
+  Future<void> _getOpenAIResponse(String userMessage) async {
+    try {
+      // Call the ChatbotService to get AI response
+      String aiResponse = await ChatbotService.sendMessage(userMessage);
+
+      final aiMessage = ChatMessage(
+        text: aiResponse,
+        isUser: false,
+        timestamp: DateTime.now(),
+      );
+
+      setState(() {
+        _messages.add(aiMessage);
+        _isTyping = false;
+      });
+
+      _scrollToBottom();
+    } catch (e) {
+      // Handle any errors
+      setState(() {
+        _isTyping = false;
+      });
+
+      final errorMessage = ChatMessage(
+        text: "Sorry, I'm having trouble connecting right now. Please try again later.",
+        isUser: false,
+        timestamp: DateTime.now(),
+      );
+
+      setState(() {
+        _messages.add(errorMessage);
+      });
+
+      _scrollToBottom();
+    }
+  }
+
+  // ✅ KEEP THIS METHOD as fallback (you can remove it later if you want)
   Future<void> _getAIResponse(String userMessage) async {
     try {
-      // TODO: Replace this with actual AI API call
-      // Example structure for API integration:
-      /*
-      final response = await http.post(
-        Uri.parse('https://api.openai.com/v1/chat/completions'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer YOUR_API_KEY',
-        },
-        body: jsonEncode({
-          'model': 'gpt-3.5-turbo',
-          'messages': [
-            {'role': 'user', 'content': userMessage}
-          ],
-        }),
-      );
-      */
-
       // Simulate API delay
       await Future.delayed(const Duration(seconds: 1));
 
@@ -190,9 +212,9 @@ class _ChatbotPageState extends State<ChatbotPage> {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
+                    color: Colors.blue.withValues(alpha: 0.2),
+    blurRadius: 4,
+    offset: const Offset(0, -2),
                   ),
                 ],
               ),
@@ -264,9 +286,9 @@ class _ChatbotPageState extends State<ChatbotPage> {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
+                  color: Colors.blue.withValues(alpha: 0.2),
+    blurRadius: 4,
+    offset: const Offset(0, -2),
                 ),
               ],
             ),
@@ -306,9 +328,9 @@ class _ChatbotPageState extends State<ChatbotPage> {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 4,
-            offset: const Offset(0, -2),
+             color: Colors.blue.withValues(alpha: 0.2),
+    blurRadius: 4,
+    offset: const Offset(0, -2),
           ),
         ],
       ),
@@ -394,6 +416,23 @@ class _ChatbotPageState extends State<ChatbotPage> {
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
+          // ✅ Add API indicator
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.green,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Text(
+              'AI',
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+          ),
           // User indicator
           if (user != null)
             Padding(
@@ -440,9 +479,9 @@ class _ChatbotPageState extends State<ChatbotPage> {
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(16),
-            color: Colors.blue.shade50,
+            color: Colors.green.shade50,
             child: const Text(
-              'Ask me anything about voting, candidates, or how to use this app!',
+              'Ask me anything about voting, candidates, or how to use this app! (Powered by OpenAI)',
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: Colors.black87,
