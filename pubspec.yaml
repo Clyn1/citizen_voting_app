@@ -1,6 +1,7 @@
+# pubspec.yaml - CORRECTED VERSION
 name: citizen_voting_app_new
 description: "A new Flutter project."
-publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+publish_to: 'none'
 
 version: 1.0.0+1
 
@@ -11,10 +12,9 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # iOS-style icons
   cupertino_icons: ^1.0.8
 
-  # 🔥 Firebase dependencies
+  # Firebase dependencies
   firebase_core: ^4.0.0
   firebase_auth: ^6.0.1
   cloud_firestore: ^6.0.0
@@ -31,8 +31,12 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-
   flutter_lints: ^5.0.0
 
 flutter:
   uses-material-design: true
+  
+  # THIS IS THE CRITICAL FIX - ADD ASSETS SECTION
+  assets:
+    - .env
+    

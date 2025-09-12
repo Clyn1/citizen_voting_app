@@ -1,238 +1,204 @@
+// lib/screens/home_page.dart - Updated with AI Assistant Button
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'vote_page.dart';
+import 'results_page.dart';
+import 'admin_dashboard.dart';
 import 'chatbot_page.dart';
+import 'login_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
+
   @override
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage>
-    with SingleTickerProviderStateMixin {
+class _HomePageState extends State<HomePage> {
+  int _currentIndex = 0;
   final _auth = FirebaseAuth.instance;
-  final _db = FirebaseFirestore.instance;
 
-  User? _user;
-  bool _isAdmin = false;
-  bool _hasVoted = false;
-  bool _loadingAdmin = true;
+  final List<Widget> _pages = [
+    const VotePage(),
+    const ResultsPage(),
+    const AdminDashboard(),
+  ];
 
-  late TabController _tabController;
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 3, vsync: this);
-    _loadUserData();
-  }
-
-  Future<void> _loadUserData() async {
-    final user = _auth.currentUser;
-    setState(() {
-      _user = user;
-    });
-
-    if (user != null) {
-      final doc = await _db.collection('users').doc(user.uid).get();
-      if (doc.exists) {
-        setState(() {
-          _isAdmin = doc['isAdmin'] ?? false;
-        });
-      }
-      final voteDoc = await _db.collection('user_votes').doc(user.uid).get();
-      setState(() {
-        _hasVoted = voteDoc.exists;
-      });
-    }
-
-    setState(() {
-      _loadingAdmin = false;
-    });
-  }
-
-  // ---------------- Voting Tab ----------------
-  Widget _buildVotingTab() {
-    return const Center(child: Text("Voting Tab UI here..."));
-  }
-
-  // ---------------- Results Tab ----------------
-  Widget _buildResultsTab() {
-    return const Center(child: Text("Results Tab UI here..."));
-  }
-
-  // ---------------- Admin Tab ----------------
-  Widget _buildAdminTab() {
-    if (!_isAdmin) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.admin_panel_settings, size: 64, color: Colors.grey),
-            SizedBox(height: 16),
-            Text(
-              'Admin Access Required',
-              style: TextStyle(fontSize: 18, color: Colors.grey),
-            ),
-            SizedBox(height: 8),
-            Text(
-              'You need admin privileges to access this section',
-              style: TextStyle(fontSize: 14, color: Colors.grey),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      );
-    }
-
-    // Admin UI here (from your original code)
-    return const Center(child: Text("Admin Dashboard UI here..."));
-  }
+  final List<String> _titles = [
+    'Vote',
+    'Results',
+    'Admin',
+  ];
 
   @override
   Widget build(BuildContext context) {
-    if (_loadingAdmin) {
-      return Scaffold(
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const CircularProgressIndicator(),
-              const SizedBox(height: 16),
-              Text(
-                'Loading...',
-                style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
+    final user = _auth.currentUser;
+    
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Citizen Voting App',
-          style: TextStyle(fontWeight: FontWeight.bold),
+        title: Text(
+          _titles[_currentIndex],
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
         backgroundColor: Colors.blue.shade700,
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: Center(
-              child: Text(
-                _user?.email?.split('@')[0] ?? 'Guest',
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-          ),
-          if (_isAdmin)
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.orange,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Text(
-                'ADMIN',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          IconButton(
-            onPressed: () async {
-              await _auth.signOut();
-              if (context.mounted) {
-                Navigator.pushReplacementNamed(context, '/login');
-              }
-            },
-            icon: const Icon(Icons.logout),
-            tooltip: 'Logout',
-          ),
-        ],
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: Colors.white,
-          indicatorWeight: 3,
-          tabs: const [
-            Tab(icon: Icon(Icons.how_to_vote), text: 'Vote'),
-            Tab(icon: Icon(Icons.bar_chart), text: 'Results'),
-            Tab(icon: Icon(Icons.admin_panel_settings), text: 'Admin'),
-          ],
-        ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [_buildVotingTab(), _buildResultsTab(), _buildAdminTab()],
-      ),
-      bottomNavigationBar: Container(
-        height: 50,
-        color: Colors.grey.shade100,
-        child: Center(
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                _hasVoted ? Icons.check_circle : Icons.circle_outlined,
-                color: _hasVoted ? Colors.green : Colors.grey,
-                size: 16,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                _hasVoted ? 'You have voted' : 'Vote not cast yet',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: _hasVoted ? Colors.green : Colors.grey.shade600,
-                ),
-              ),
-              if (_isAdmin) ...[
-                const SizedBox(width: 16),
-                const Icon(
-                  Icons.admin_panel_settings,
-                  color: Colors.orange,
-                  size: 16,
-                ),
-                const SizedBox(width: 4),
-                const Text(
-                  'Admin Mode',
-                  style: TextStyle(
+          // User info
+          if (user != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Center(
+                child: Text(
+                  user.email?.split('@')[0] ?? 'Guest',
+                  style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
-                    color: Colors.orange,
                   ),
                 ),
-              ],
+              ),
+            ),
+          
+          // Logout button
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert),
+            onSelected: (value) {
+              if (value == 'logout') {
+                _showLogoutDialog(context);
+              } else if (value == 'ai_assistant') {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ChatbotPage(),
+                  ),
+                );
+              }
+            },
+            itemBuilder: (BuildContext context) => [
+              const PopupMenuItem<String>(
+                value: 'ai_assistant',
+                child: Row(
+                  children: [
+                    Icon(Icons.smart_toy, size: 20, color: Colors.blue),
+                    SizedBox(width: 8),
+                    Text('AI Assistant'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem<String>(
+                value: 'logout',
+                child: Row(
+                  children: [
+                    Icon(Icons.logout, size: 20, color: Colors.red),
+                    SizedBox(width: 8),
+                    Text('Logout'),
+                  ],
+                ),
+              ),
             ],
           ),
-        ),
+        ],
       ),
+      body: _pages[_currentIndex],
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        onTap: (index) {
+          setState(() {
+            _currentIndex = index;
+          });
+        },
+        type: BottomNavigationBarType.fixed,
+        selectedItemColor: Colors.blue.shade700,
+        unselectedItemColor: Colors.grey,
+        backgroundColor: Colors.white,
+        elevation: 8,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.how_to_vote),
+            label: 'Vote',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.bar_chart),
+            label: 'Results',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.admin_panel_settings),
+            label: 'Admin',
+          ),
+        ],
+      ),
+      
+      // ✅ AI Assistant Floating Action Button
       floatingActionButton: FloatingActionButton(
-        backgroundColor: Colors.blue,
         onPressed: () {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => const ChatbotPage()),
+            MaterialPageRoute(
+              builder: (context) => const ChatbotPage(),
+            ),
           );
         },
-        child: const Icon(Icons.chat),
+        backgroundColor: Colors.blue.shade700,
+        foregroundColor: Colors.white,
+        tooltip: 'AI Assistant',
+        child: const Icon(
+          Icons.smart_toy,
+          size: 28,
+        ),
       ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+    );
+  }
+
+  void _showLogoutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Logout'),
+          content: const Text('Are you sure you want to logout?'),
+          actions: [
+            TextButton(
+              child: const Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: const Text(
+                'Logout',
+                style: TextStyle(color: Colors.red),
+              ),
+              onPressed: () async {
+                Navigator.of(context).pop();
+                try {
+                  await _auth.signOut();
+                  if (mounted) {
+                    Navigator.of(context).pushAndRemoveUntil(
+                      MaterialPageRoute(
+                        builder: (context) => const LoginScreen(),
+                      ),
+                      (route) => false,
+                    );
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Error logging out: $e'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
+              },
+            ),
+          ],
+        );
+      },
     );
   }
 }
 
-// Extension for Colors.gold
-extension CustomColors on Colors {
-  static const Color gold = Color(0xFFFFD700);
-}
+
