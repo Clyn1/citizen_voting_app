@@ -1,89 +1,87 @@
 // lib/screens/chatbot_service.dart
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'screen.dart'; // Import your screen.dart file that contains the API key
-
 class ChatbotService {
+  // Replace with your actual OpenAI API key
+  static const String _apiKey = 'YOUR_OPENAI_API_KEY_HERE';
   static const String _baseUrl = 'https://api.openai.com/v1/chat/completions';
   
-  // Method to send message to OpenAI and get response
-  static Future<String> sendMessage(String userMessage) async {
+  // Rate limiting variables
+  static DateTime? _lastRequestTime;
+  static const int _requestIntervalSeconds = 3; // Wait 3 seconds between requests
+
+  // Check if we can make a request (not rate limited)
+  static bool canMakeRequest() {
+    if (_lastRequestTime == null) return true;
+    
+    final now = DateTime.now();
+    final timeDifference = now.difference(_lastRequestTime!);
+    return timeDifference.inSeconds >= _requestIntervalSeconds;
+  }
+
+  // Get remaining wait time before next request
+  static Duration getRemainingWaitTime() {
+    if (_lastRequestTime == null) return Duration.zero;
+    
+    final now = DateTime.now();
+    final timeDifference = now.difference(_lastRequestTime!);
+    final remainingSeconds = _requestIntervalSeconds - timeDifference.inSeconds;
+    
+    return remainingSeconds > 0 
+        ? Duration(seconds: remainingSeconds) 
+        : Duration.zero;
+  }
+
+  // Send message to OpenAI API
+  static Future<String> sendMessage(String message) async {
     try {
-      // Check if API key is configured
-      if (Secrets.openaiApiKey.isEmpty || Secrets.openaiApiKey == 'your-openai-api-key-here') {
-        return 'Please configure your OpenAI API key in screen.dart file to use AI features.';
-      }
+      // Update last request time for rate limiting
+      _lastRequestTime = DateTime.now();
 
       final response = await http.post(
         Uri.parse(_baseUrl),
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer ${Secrets.openaiApiKey}',
+          'Authorization': 'Bearer $_apiKey',
         },
         body: jsonEncode({
           'model': 'gpt-3.5-turbo',
           'messages': [
             {
               'role': 'system',
-              'content': 'You are a helpful AI assistant for a citizen voting app. Help users with voting procedures, candidate information, election results, and app navigation. Keep responses helpful, accurate, and relevant to voting and elections. Be concise but informative. Focus on:\n'
-                        '- How to vote in the app\n'
-                        '- Information about candidates\n'
-                        '- Understanding election results\n'
-                        '- App features and navigation\n'
-                        '- Voting rights and procedures\n'
-                        '- Election security and privacy'
+              'content': 'You are a helpful AI assistant for a Citizen Voting App. Help users with questions about voting, candidates, election processes, and app navigation. Be informative, friendly, and concise.'
             },
             {
               'role': 'user',
-              'content': userMessage
+              'content': message,
             }
           ],
-          'max_tokens': 300,
+          'max_tokens': 500,
           'temperature': 0.7,
         }),
       );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final content = data['choices'][0]['message']['content'].toString().trim();
-        return content.isNotEmpty ? content : 'I received an empty response. Please try again.';
+        return data['choices'][0]['message']['content'].toString().trim();
+      } else if (response.statusCode == 429) {
+        // Rate limit exceeded
+        return "I'm receiving too many requests right now. Please wait a moment before trying again.";
+      } else if (response.statusCode == 401) {
+        // Invalid API key
+        return "There's an authentication issue with the AI service. Please contact support.";
       } else {
-        print('API Error - Status: ${response.statusCode}, Body: ${response.body}');
-        return _handleApiError(response.statusCode);
+        // Other API errors
+        return "I'm having trouble connecting to the AI service. Please try again later.";
       }
     } catch (e) {
-      print('ChatbotService Error: $e');
-      return 'Sorry, I\'m having trouble connecting right now. Please check your internet connection and try again.';
+      // Network or other errors
+      return "I'm having trouble connecting right now. Please check your internet connection and try again.";
     }
   }
 
-  // Handle different API error codes
-  static String _handleApiError(int statusCode) {
-    switch (statusCode) {
-      case 401:
-        return 'API authentication failed. Please check your OpenAI API key configuration.';
-      case 429:
-        return 'Too many requests. Please wait a moment and try again.';
-      case 500:
-        return 'OpenAI service is temporarily unavailable. Please try again later.';
-      case 503:
-        return 'Service is currently overloaded. Please try again in a few minutes.';
-      default:
-        return 'Sorry, I\'m experiencing technical difficulties (Error $statusCode). Please try again later.';
-    }
-  }
-
-  // Test connection method
-  static Future<bool> testConnection() async {
-    try {
-      if (Secrets.openaiApiKey.isEmpty || Secrets.openaiApiKey == 'your-openai-api-key-here') {
-        return false;
-      }
-      
-      String response = await sendMessage('Hello');
-      return response.isNotEmpty && !response.contains('Please configure');
-    } catch (e) {
-      return false;
-    }
+  // Reset rate limiting (useful for testing)
+  static void resetRateLimit() {
+    _lastRequestTime = null;
   }
 }

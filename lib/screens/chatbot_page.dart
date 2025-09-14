@@ -213,8 +213,8 @@ class _ChatbotPageState extends State<ChatbotPage> {
                 boxShadow: [
                   BoxShadow(
                     color: Colors.blue.withValues(alpha: 0.2),
-    blurRadius: 4,
-    offset: const Offset(0, -2),
+                    blurRadius: 4,
+                    offset: const Offset(0, -2),
                   ),
                 ],
               ),
@@ -287,8 +287,8 @@ class _ChatbotPageState extends State<ChatbotPage> {
               boxShadow: [
                 BoxShadow(
                   color: Colors.blue.withValues(alpha: 0.2),
-    blurRadius: 4,
-    offset: const Offset(0, -2),
+                  blurRadius: 4,
+                  offset: const Offset(0, -2),
                 ),
               ],
             ),
@@ -321,64 +321,95 @@ class _ChatbotPageState extends State<ChatbotPage> {
     );
   }
 
+  // ✅ UPDATED METHOD: Message input with rate limiting
   Widget _buildMessageInput() {
+    final canSend = ChatbotService.canMakeRequest() && !_isTyping;
+    final waitTime = ChatbotService.getRemainingWaitTime();
+    
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-             color: Colors.blue.withValues(alpha: 0.2),
-    blurRadius: 4,
-    offset: const Offset(0, -2),
+            color: Colors.blue.withValues(alpha: 0.2),
+            blurRadius: 4,
+            offset: const Offset(0, -2),
           ),
         ],
       ),
       child: SafeArea(
-        child: Row(
+        child: Column(
           children: [
-            Expanded(
-              child: Container(
+            // Rate limit warning
+            if (!canSend && waitTime.inSeconds > 0)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                margin: const EdgeInsets.only(bottom: 8),
                 decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey.shade300),
-                  borderRadius: BorderRadius.circular(25),
+                  color: Colors.orange.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.orange.shade300),
                 ),
-                child: TextField(
-                  controller: _messageController,
-                  decoration: const InputDecoration(
-                    hintText: 'Ask me about voting, candidates, or the app...',
-                    border: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 12,
-                    ),
+                child: Text(
+                  'Please wait ${waitTime.inSeconds} seconds to avoid rate limits',
+                  style: TextStyle(
+                    color: Colors.orange.shade800,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
                   ),
-                  maxLines: null,
-                  textCapitalization: TextCapitalization.sentences,
-                  onSubmitted: (_) => _sendMessage(),
+                  textAlign: TextAlign.center,
                 ),
               ),
-            ),
-            const SizedBox(width: 8),
-            FloatingActionButton.small(
-              onPressed: _isTyping ? null : _sendMessage,
-              backgroundColor: _isTyping
-                  ? Colors.grey.shade400
-                  : Colors.blue.shade600,
-              child: _isTyping
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                      ),
-                    )
-                  : const Icon(
-                      Icons.send,
-                      color: Colors.white,
-                      size: 20,
+            
+            // Input row
+            Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade300),
+                      borderRadius: BorderRadius.circular(25),
                     ),
+                    child: TextField(
+                      controller: _messageController,
+                      decoration: const InputDecoration(
+                        hintText: 'Ask me about voting, candidates, or the app...',
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 12,
+                        ),
+                      ),
+                      maxLines: null,
+                      textCapitalization: TextCapitalization.sentences,
+                      onSubmitted: (_) => canSend ? _sendMessage() : null,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                FloatingActionButton.small(
+                  onPressed: canSend ? _sendMessage : null,
+                  backgroundColor: canSend
+                      ? Colors.blue.shade600
+                      : Colors.grey.shade400,
+                  child: _isTyping
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : const Icon(
+                          Icons.send,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                ),
+              ],
             ),
           ],
         ),
