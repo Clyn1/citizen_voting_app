@@ -1,7 +1,7 @@
 // lib/screens/chatbot_page.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import './chatbot_service.dart'; // ✅ Add this import
+import 'chatbot_service.dart';
 
 class ChatbotPage extends StatefulWidget {
   const ChatbotPage({super.key});
@@ -20,6 +20,8 @@ class _ChatbotPageState extends State<ChatbotPage> {
   @override
   void initState() {
     super.initState();
+    // Initialize Gemini service
+    ChatbotService.initializeService();
     _addWelcomeMessage();
   }
 
@@ -32,7 +34,7 @@ class _ChatbotPageState extends State<ChatbotPage> {
 
   void _addWelcomeMessage() {
     final welcomeMessage = ChatMessage(
-      text: "Hello! I'm your AI assistant for the Citizen Voting App. I can help you with questions about voting, candidates, or how to use this app. What would you like to know?",
+      text: "Hello! I'm your AI assistant for the Kenyan Voting App. I can help you with questions about voting procedures, candidates, app navigation, and electoral processes in Kenya. What would you like to know?",
       isUser: false,
       timestamp: DateTime.now(),
     );
@@ -60,14 +62,12 @@ class _ChatbotPageState extends State<ChatbotPage> {
     _messageController.clear();
     _scrollToBottom();
 
-    // ✅ Replace the old _getAIResponse with OpenAI API call
-    await _getOpenAIResponse(text);
+    await _getGeminiResponse(text);
   }
 
-  // ✅ NEW METHOD: Get response from OpenAI API
-  Future<void> _getOpenAIResponse(String userMessage) async {
+  Future<void> _getGeminiResponse(String userMessage) async {
     try {
-      // Call the ChatbotService to get AI response
+      // Call the Gemini-powered ChatbotService
       String aiResponse = await ChatbotService.sendMessage(userMessage);
 
       final aiMessage = ChatMessage(
@@ -83,13 +83,12 @@ class _ChatbotPageState extends State<ChatbotPage> {
 
       _scrollToBottom();
     } catch (e) {
-      // Handle any errors
       setState(() {
         _isTyping = false;
       });
 
       final errorMessage = ChatMessage(
-        text: "Sorry, I'm having trouble connecting right now. Please try again later.",
+        text: "Sorry, I'm having trouble connecting right now. Please try again later or check your internet connection.",
         isUser: false,
         timestamp: DateTime.now(),
       );
@@ -99,66 +98,6 @@ class _ChatbotPageState extends State<ChatbotPage> {
       });
 
       _scrollToBottom();
-    }
-  }
-
-  // ✅ KEEP THIS METHOD as fallback (you can remove it later if you want)
-  Future<void> _getAIResponse(String userMessage) async {
-    try {
-      // Simulate API delay
-      await Future.delayed(const Duration(seconds: 1));
-
-      // Generate mock response based on user input
-      String aiResponse = _generateMockResponse(userMessage);
-
-      final aiMessage = ChatMessage(
-        text: aiResponse,
-        isUser: false,
-        timestamp: DateTime.now(),
-      );
-
-      setState(() {
-        _messages.add(aiMessage);
-        _isTyping = false;
-      });
-
-      _scrollToBottom();
-    } catch (e) {
-      setState(() {
-        _isTyping = false;
-      });
-
-      final errorMessage = ChatMessage(
-        text: "Sorry, I'm having trouble connecting right now. Please try again later.",
-        isUser: false,
-        timestamp: DateTime.now(),
-      );
-
-      setState(() {
-        _messages.add(errorMessage);
-      });
-
-      _scrollToBottom();
-    }
-  }
-
-  String _generateMockResponse(String userMessage) {
-    final lowerMessage = userMessage.toLowerCase();
-
-    if (lowerMessage.contains('vote') || lowerMessage.contains('voting')) {
-      return "To cast your vote, go to the 'Vote' tab and select your preferred candidate. You can only vote once, so make sure to review your choice before confirming. Your vote will be recorded securely and anonymously.";
-    } else if (lowerMessage.contains('candidate')) {
-      return "You can view all candidates in the 'Vote' tab. Each candidate card shows their name, political party, photo, and current vote count. Take your time to review their information before making your decision.";
-    } else if (lowerMessage.contains('result')) {
-      return "Election results are available in the 'Results' tab. You can see real-time vote counts, percentages, and candidate rankings. The results update automatically as votes are cast.";
-    } else if (lowerMessage.contains('admin')) {
-      return "Admin features are available in the 'Admin' tab for authorized users. Admins can add new candidates, edit candidate information, manage user votes, and view detailed election statistics.";
-    } else if (lowerMessage.contains('help')) {
-      return "I can help you with:\n• How to vote\n• Candidate information\n• Election results\n• App navigation\n• Voting rules and requirements\n\nWhat specific question do you have?";
-    } else if (lowerMessage.contains('hello') || lowerMessage.contains('hi')) {
-      return "Hello! How can I assist you with your voting experience today?";
-    } else {
-      return "I understand you're asking about '$userMessage'. While I'm still learning, I can help you with voting procedures, candidate information, and app navigation. Could you be more specific about what you'd like to know?";
     }
   }
 
@@ -247,7 +186,7 @@ class _ChatbotPageState extends State<ChatbotPage> {
             CircleAvatar(
               radius: 16,
               backgroundColor: Colors.blue.shade600,
-              child: Icon(
+              child: const Icon(
                 Icons.person,
                 size: 18,
                 color: Colors.white,
@@ -307,7 +246,7 @@ class _ChatbotPageState extends State<ChatbotPage> {
                 ),
                 const SizedBox(width: 8),
                 const Text(
-                  'Typing...',
+                  'Thinking...',
                   style: TextStyle(
                     color: Colors.black54,
                     fontSize: 14,
@@ -321,10 +260,10 @@ class _ChatbotPageState extends State<ChatbotPage> {
     );
   }
 
-  // ✅ UPDATED METHOD: Message input with rate limiting
   Widget _buildMessageInput() {
     final canSend = ChatbotService.canMakeRequest() && !_isTyping;
     final waitTime = ChatbotService.getRemainingWaitTime();
+    final serviceStatus = ChatbotService.getServiceStatus();
     
     return Container(
       padding: const EdgeInsets.all(16),
@@ -363,6 +302,28 @@ class _ChatbotPageState extends State<ChatbotPage> {
                 ),
               ),
             
+            // Service status indicator (only show if there are issues)
+            if (!serviceStatus['initialized'])
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                margin: const EdgeInsets.only(bottom: 8),
+                decoration: BoxDecoration(
+                  color: Colors.yellow.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.yellow.shade300),
+                ),
+                child: Text(
+                  'Using offline responses - check your API key configuration',
+                  style: TextStyle(
+                    color: Colors.yellow.shade800,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            
             // Input row
             Row(
               children: [
@@ -375,7 +336,7 @@ class _ChatbotPageState extends State<ChatbotPage> {
                     child: TextField(
                       controller: _messageController,
                       decoration: const InputDecoration(
-                        hintText: 'Ask me about voting, candidates, or the app...',
+                        hintText: 'Ask me about voting in Kenya...',
                         border: InputBorder.none,
                         contentPadding: EdgeInsets.symmetric(
                           horizontal: 20,
@@ -435,11 +396,12 @@ class _ChatbotPageState extends State<ChatbotPage> {
   @override
   Widget build(BuildContext context) {
     final user = _auth.currentUser;
+    final serviceStatus = ChatbotService.getServiceStatus();
     
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'AI Assistant',
+          'AI Voting Assistant',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
@@ -447,23 +409,24 @@ class _ChatbotPageState extends State<ChatbotPage> {
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
-          // ✅ Add API indicator
+          // Service indicator
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: Colors.green,
+              color: serviceStatus['initialized'] ? Colors.green : Colors.orange,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Text(
-              'AI',
-              style: TextStyle(
+            child: Text(
+              serviceStatus['initialized'] ? 'GEMINI' : 'OFFLINE',
+              style: const TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
               ),
             ),
           ),
+          
           // User indicator
           if (user != null)
             Padding(
@@ -478,15 +441,27 @@ class _ChatbotPageState extends State<ChatbotPage> {
                 ),
               ),
             ),
-          // Clear chat button
+            
+          // Menu
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert),
             onSelected: (value) {
-              if (value == 'clear') {
-                setState(() {
-                  _messages.clear();
-                  _addWelcomeMessage();
-                });
+              switch (value) {
+                case 'clear':
+                  setState(() {
+                    _messages.clear();
+                    _addWelcomeMessage();
+                  });
+                  break;
+                case 'reset':
+                  ChatbotService.resetRateLimit();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Rate limit reset')),
+                  );
+                  break;
+                case 'status':
+                  _showServiceStatus();
+                  break;
               }
             },
             itemBuilder: (BuildContext context) => [
@@ -500,6 +475,26 @@ class _ChatbotPageState extends State<ChatbotPage> {
                   ],
                 ),
               ),
+              const PopupMenuItem<String>(
+                value: 'reset',
+                child: Row(
+                  children: [
+                    Icon(Icons.refresh, size: 20),
+                    SizedBox(width: 8),
+                    Text('Reset Limits'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem<String>(
+                value: 'status',
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, size: 20),
+                    SizedBox(width: 8),
+                    Text('Service Status'),
+                  ],
+                ),
+              ),
             ],
           ),
         ],
@@ -510,13 +505,20 @@ class _ChatbotPageState extends State<ChatbotPage> {
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(16),
-            color: Colors.green.shade50,
-            child: const Text(
-              'Ask me anything about voting, candidates, or how to use this app! (Powered by OpenAI)',
+            color: serviceStatus['initialized'] 
+                ? Colors.green.shade50 
+                : Colors.orange.shade50,
+            child: Text(
+              serviceStatus['initialized']
+                  ? 'Ask me anything about voting in Kenya! (Powered by Google Gemini)'
+                  : 'Using offline responses - Gemini API not configured',
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: Colors.black87,
+                color: serviceStatus['initialized'] 
+                    ? Colors.green.shade800 
+                    : Colors.orange.shade800,
                 fontSize: 14,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ),
@@ -543,7 +545,7 @@ class _ChatbotPageState extends State<ChatbotPage> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Ask me about voting procedures,\ncandidates, or app features.',
+                          'Ask me about voting procedures,\ncandidates, or electoral processes in Kenya.',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 14,
@@ -568,6 +570,36 @@ class _ChatbotPageState extends State<ChatbotPage> {
           
           // Message input
           _buildMessageInput(),
+        ],
+      ),
+    );
+  }
+
+  void _showServiceStatus() {
+    final status = ChatbotService.getServiceStatus();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Service Status'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Service: ${status['serviceType']}'),
+            Text('Status: ${status['initialized'] ? 'Online' : 'Offline'}'),
+            Text('Requests Made: ${status['requestCount']}'),
+            Text('Recent Requests: ${status['recentRequestsCount']}'),
+            if (status['failureCount'] > 0)
+              Text('Failures: ${status['failureCount']}'),
+            if (!status['canMakeRequest'])
+              Text('Wait Time: ${status['remainingWaitTimeSeconds']}s'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
         ],
       ),
     );
