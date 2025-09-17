@@ -9,18 +9,18 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  firebase_auth: ^4.15.3
-  firebase_core: ^2.24.2  # Add this if missing
-  cloud_firestore: ^4.13.6
-  firebase_storage: ^11.5.6
+  firebase_auth: ^6.0.2
+  firebase_core: ^4.1.0  # Add this if missing
+  cloud_firestore: ^6.0.1
+  firebase_storage: ^13.0.1
   image_picker: ^1.0.4
-  file_picker: ^6.1.1
-  flutter_dotenv: ^5.1.0  # Add this line
+  file_picker: ^10.3.3
+  flutter_dotenv: ^6.0.0  # Add this line
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^3.0.0
+  flutter_lints: ^6.0.0
 
 flutter:
   uses-material-design: true
