@@ -1,6 +1,6 @@
 # citizen_voting_app_new
 
-A new Flutter project.
+A new Flutter project
 
 ## Getting Started
 
